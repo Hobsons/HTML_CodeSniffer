@@ -190,6 +190,10 @@ _global.HTMLCS_WCAG2AAA_Sniffs_Principle4_Guideline4_1_4_1_2 = {
                 if ((nodeName === 'input_submit') || (nodeName === 'input_reset')) {
                     nodeName = 'input_button';
                 }
+                // Treat all input subtypes as the same
+                if ((nodeName === 'input_date') || (nodeName === 'input_datetime')) {
+                    nodeName = 'input_text';
+                }
 
                 // Get a format like "InputText".
                 var msgSubCode = 'Input' + nodeName.substr(6, 1).toUpperCase() + nodeName.substr(7).toLowerCase();
