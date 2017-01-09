@@ -191,7 +191,7 @@ _global.HTMLCS_WCAG2AAA_Sniffs_Principle4_Guideline4_1_4_1_2 = {
                     nodeName = 'input_button';
                 }
                 // Treat all input subtypes as the same
-                if ((nodeName === 'input_date') || (nodeName === 'input_datetime')) {
+                if ((nodeName === 'input_date') || (nodeName === 'input_datetime') || (nodeName === 'input_email') || (nodeName === 'input_number')) {
                     nodeName = 'input_text';
                 }
 
