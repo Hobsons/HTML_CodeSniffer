@@ -1,5 +1,56 @@
 # HTML_CodeSniffer README
 
+## WebPack Integration
+
+To correctly load HTML_CodeSniffer into the project, you need to import the latest @purple/HTML_CodeSniffer
+and you need the [webpack imports loader](https://github.com/webpack-contrib/imports-loader) because the
+HTML_CodeSniffer relies internally on global variables. When you want to import the code sniffer, you need the following 2 lines
+
+```javascript
+const HTMLCS = require('imports-loader?define=>false!@purple/HTML_CodeSniffer');
+Object.assign(window, HTMLCS);
+````
+
+## Implementing a DOM Watcher
+
+The easiest way to integrate HTML_CodeSniffer into your dev workflow is to implement a MutationObserver that will react to
+any changes in your dom and run the current dom through the HTMLCS process function and report any warnings or errors that you see.
+
+To see an example of this working, see this snippet of code that detects changes to the dom from a passed in root node,
+validates the dom against WCAG2AA and outputs the warnings and errors to the console. You'll see some ignored codes that
+as an example.
+
+```javascript
+import debounce from 'lodash/debounce';
+
+const ignoredCodes = [
+  'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Abs',
+  'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail',
+  'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage',
+];
+
+function scanDom(appDom) {
+  HTMLCS.HTMLCS.process('WCAG2AA', appDom, () => {
+    HTMLCS.HTMLCS.getMessages()
+      .forEach((message) => {
+        // ignore notices and color contrast warnings due to lots of false positives
+        if (message.type !== 3 && ignoredCodes.indexOf(message.code) === -1) {
+          console[message.type === 1 ? 'error' : 'warn'](message.element, message.msg, message.code); // eslint-disable-line no-console
+        }
+      });
+  });
+}
+
+export default function initDomWatcher(appDom) {
+  const observer = new MutationObserver(debounce(scanDom.bind(this, appDom), 250));
+  observer.observe(appDom, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+  });
+}
+```
+
 ## What is HTML_CodeSniffer?
 
 HTML_CodeSniffer is a JavaScript application that checks a HTML document
