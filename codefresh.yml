@@ -100,7 +100,7 @@ steps:
       #   only:
       #     - master
       steps:
-        - name: jfrog_version_test
+        - name: publish_env
           on:
             - success
 
