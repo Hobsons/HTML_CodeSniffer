@@ -65,25 +65,22 @@ steps:
           on:
             - success
 
-  jfrog_version_test:
-    stage: release
-    title: "Check Published Versions"
-    image: ${{publish_env}}
-    working_directory: /plugin
-    environment:
-      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_BUILDER_USERNAME}}
-      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_BUILDER_PASSWORD}}
-      - NPM_REGISTRY_NAME=${{INTERSECT_NPM_VIRTUAL_REPO}}
-    commands:
-      - npm run test-version
-    when:
-      branch:
-        only:
-          - master
-      steps:
-        - name: publish_env
-          on:
-            - success
+  # jfrog_version_test:
+  #   stage: release
+  #   title: "Check Published Versions"
+  #   image: ${{publish_env}}
+  #   working_directory: /plugin
+  #   environment:
+  #     - ARTIFACTORY_USERNAME=${{ARTIFACTORY_BUILDER_USERNAME}}
+  #     - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_BUILDER_PASSWORD}}
+  #     - NPM_REGISTRY_NAME=${{INTERSECT_NPM_VIRTUAL_REPO}}
+  #   commands:
+  #     - npm run test-version
+  #   when:
+  #     steps:
+  #       - name: publish_env
+  #         on:
+  #           - success
 
   jfrog_publish:
     stage: release
