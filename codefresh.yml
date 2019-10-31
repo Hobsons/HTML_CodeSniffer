@@ -71,8 +71,8 @@ steps:
     image: ${{publish_env}}
     working_directory: /plugin
     environment:
-      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_DEV_DEPLOYER_USERNAME}}
-      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_DEV_DEPLOYER_PASSWORD}}
+      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_BUILDER_USERNAME}}
+      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_BUILDER_PASSWORD}}
       - NPM_REGISTRY_NAME=${{NAVIANCE_NPM_VIRTUAL_REPO}}
     commands:
       - npm run test-version
@@ -81,6 +81,11 @@ steps:
         - name: publish_env
           on:
             - success
+      # The following can optionally be uncommented to not fail the pipeline for feature
+      # branches where the version number has not been changed:
+      # branch:
+      #   only:
+      #     - master
 
   jfrog_publish:
     stage: release
@@ -100,7 +105,7 @@ steps:
       #   only:
       #     - master
       steps:
-        - name: publish_env
+        - name: jfrog_version_test
           on:
             - success
 
