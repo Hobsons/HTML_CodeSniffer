@@ -1,0 +1,179 @@
+version: "1.0"
+mode: parallel
+stages:
+  - prepare
+  - build
+  - release
+  - notify
+
+steps:
+  main_clone:
+    stage: prepare
+    title: Cloning main repository...
+    type: git-clone
+    git: github
+    repo: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+    revision: "${{CF_REVISION}}"
+    when:
+      condition:
+        all:
+          noSkipCiInCommitMessage: 'includes(lower("${{CF_COMMIT_MESSAGE}}"), "[skip ci]") == false'
+
+  get_git_token:
+    stage: prepare
+    title: Reading Github token
+    image: codefresh/cli
+    commands:
+      - echo "GITHUB_TOKEN=$(codefresh get context github --decrypt -o yaml | yq -y .spec.data.auth.password)" >> ${{CF_VOLUME_PATH}}/env_vars_to_export
+    when:
+      # branch:
+      #   only:
+      #     - master
+      condition:
+        all:
+          noSkipCiInCommitMessage: 'includes(lower("${{CF_COMMIT_MESSAGE}}"), "[skip ci]") == false'
+
+  build_env:
+    stage: build
+    title: Building Build Image
+    type: build
+    image_name: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+    tag: "${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_SHORT_REVISION}}-build"
+    target: build-env
+    dockerfile: docker/Dockerfile-cf-publish-module
+    when:
+      steps:
+        - name: main_clone
+          on:
+            - success
+
+  publish_env:
+    stage: build
+    title: Building JFrog Publish Image
+    type: build
+    image_name: "${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+    working_directory: ./
+    tag: "${{CF_BRANCH_TAG_NORMALIZED}}-publish"
+    target: publish-env
+    dockerfile: docker/Dockerfile-cf-publish-module
+    when:
+      # branch:
+      #   only:
+      #     - master
+      steps:
+        - name: build_env
+          on:
+            - success
+
+  jfrog_version_test:
+    stage: release
+    title: "Check Published Versions"
+    image: ${{publish_env}}
+    working_directory: /plugin
+    environment:
+      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_DEV_DEPLOYER_USERNAME}}
+      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_DEV_DEPLOYER_PASSWORD}}
+      - NPM_REGISTRY_NAME=${{NAVIANCE_NPM_VIRTUAL_REPO}}
+    commands:
+      - npm run test-version
+    when:
+      steps:
+        - name: publish_env
+          on:
+            - success
+
+  jfrog_publish:
+    stage: release
+    title: "Publish Artifact to Dev Repo"
+    image: ${{publish_env}}
+    working_directory: /plugin
+    environment:
+      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_DEV_PROMOTER_USERNAME}}
+      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_DEV_PROMOTER_PASSWORD}}
+      - ARTIFACTORY_DESTINATION_REPO=${{INTERSECT_NPM_DEV_REPO}}
+      - NPM_SCOPE=@purple
+      - ARTIFACTORY_BUILD_NAME="intersect/{{CF_REPO_NAME}}/{{CF_BRANCH_TAG_NORMALIZED}}"
+    commands:
+      - npm run publish
+    when:
+      # branch:
+      #   only:
+      #     - master
+      steps:
+        - name: publish_env
+          on:
+            - success
+
+  jfrog_integration_test:
+    stage: release
+    title: "Test Installation from Dev Repo"
+    image: ${{publish_env}}
+    working_directory: /plugin
+    environment:
+      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_DEV_DEPLOYER_USERNAME}}
+      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_DEV_DEPLOYER_PASSWORD}}
+      - NPM_REGISTRY_NAME=${{INTERSECT_NPM_DEV_REPO}}
+      - NPM_SCOPE=@purple
+    commands:
+      - npm run test-install
+    when:
+      # branch:
+      #   only:
+      #     - master
+      steps:
+        - name: jfrog_publish
+          on:
+            - success
+
+  jfrog_promotion:
+    stage: release
+    title: "Promote to Release Repo"
+    image: ${{publish_env}}
+    working_directory: /plugin
+    environment:
+      - ARTIFACTORY_USERNAME=${{ARTIFACTORY_RELEASE_LIB_PROMOTER_USERNAME}}
+      - ARTIFACTORY_PASSWORD=${{ARTIFACTORY_RELEASE_LIB_PROMOTER_PASSWORD}}
+      - ARTIFACTORY_DESTINATION_REPO=${{INTERSECT_NPM_RELEASE_REPO}}
+      - NPM_SCOPE=@purple
+      - ARTIFACTORY_BUILD_NAME="intersect/{{CF_REPO_NAME}}/{{CF_BRANCH_TAG_NORMALIZED}}"
+    commands:
+      - npm run promote
+    when:
+      # branch:
+      #   only:
+      #     - master
+      steps:
+        - name: jfrog_integration_test
+          on:
+            - success
+
+  notify_success:
+    stage: notify
+    image: r.cfcr.io/hobsons/slack_notifier:STABLE
+    environment:
+      - PASSED=1
+      - WEBHOOK_URL=${{SLACK_INT-BUILDS}}
+    working_directory: /app
+    when:
+      branch:
+        only:
+          - master
+      condition:
+        all:
+          success: workflow.result == 'success'
+          noSkipCiInCommitMessage: 'includes(lower("${{CF_COMMIT_MESSAGE}}"), "[skip ci]") == false'
+
+  notify_failure:
+    stage: notify
+    image: r.cfcr.io/hobsons/slack_notifier:STABLE
+    environment:
+      - PASSED=0
+      - WEBHOOK_URL=${{SLACK_INT-BUILDS}}
+    working_directory: /app
+    when:
+      branch:
+        only:
+          - master
+      condition:
+        all:
+          success: workflow.result == 'failure'
