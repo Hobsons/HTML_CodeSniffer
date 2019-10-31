@@ -1,5 +1,5 @@
 {
-  "name": "@purple/HTML_CodeSniffer",
+  "name": "@purple/html_codesniffer",
   "version": "2.1.0-20190424",
   "description": "HTML_CodeSniffer is a client-side JavaScript that checks a HTML document or source code, and detects violations of a defined coding standard.",
   "main": "build/HTMLCS.js",
