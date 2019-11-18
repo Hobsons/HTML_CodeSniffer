@@ -1,7 +1,7 @@
 FROM node:10.15.3 as build-env
 WORKDIR /app
 COPY package*.json .npmrc* /app/
-RUN npm install && npm cache clean --force
+RUN npm ci && npm cache clean --force
 COPY . /app
 RUN npx grunt build
 

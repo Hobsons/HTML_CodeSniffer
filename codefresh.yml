@@ -33,6 +33,18 @@ steps:
         all:
           noSkipCiInCommitMessage: 'includes(lower("${{CF_COMMIT_MESSAGE}}"), "[skip ci]") == false'
 
+  generate_npmrc:
+    stage: prepare
+    type: hobsons/generate-npmrc
+    arguments:
+      navianceScope: false
+      purpleScope: true
+    when:
+      steps:
+        - name: main_clone
+          on:
+            - success
+
   build_env:
     stage: build
     title: Building Build Image
@@ -43,7 +55,7 @@ steps:
     dockerfile: Dockerfile
     when:
       steps:
-        - name: main_clone
+        - name: generate_npmrc
           on:
             - success
 
