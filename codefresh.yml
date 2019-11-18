@@ -26,9 +26,9 @@ steps:
     commands:
       - echo "GITHUB_TOKEN=$(codefresh get context github --decrypt -o yaml | yq -y .spec.data.auth.password)" >> ${{CF_VOLUME_PATH}}/env_vars_to_export
     when:
-       branch:
-         only:
-           - master
+      branch:
+        only:
+          - master
       condition:
         all:
           noSkipCiInCommitMessage: 'includes(lower("${{CF_COMMIT_MESSAGE}}"), "[skip ci]") == false'
@@ -57,9 +57,9 @@ steps:
     target: publish-env
     dockerfile: Dockerfile
     when:
-       branch:
-         only:
-           - master
+      branch:
+        only:
+          - master
       steps:
         - name: build_env
           on:
@@ -79,9 +79,9 @@ steps:
     commands:
       - npm run publish
     when:
-       branch:
-         only:
-           - master
+      branch:
+        only:
+          - master
       steps:
         - name: publish_env
           on:
@@ -100,9 +100,9 @@ steps:
     commands:
       - npm run test-install
     when:
-       branch:
-         only:
-           - master
+      branch:
+        only:
+          - master
       steps:
         - name: jfrog_publish
           on:
@@ -122,9 +122,9 @@ steps:
     commands:
       - npm run promote
     when:
-       branch:
-         only:
-           - master
+      branch:
+        only:
+          - master
       steps:
         - name: jfrog_integration_test
           on:
